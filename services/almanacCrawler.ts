@@ -1,5 +1,14 @@
 // 從 goodaytw.com 爬取真實農民曆資料
 
+export interface HourlyLuck {
+  hour: string;
+  time: string;
+  suitable: string[];
+  unsuitable: string[];
+  clash: string;
+  direction: string;
+}
+
 export interface RealAlmanacData {
   date: string;
   lunarDate: string;
@@ -27,52 +36,33 @@ export interface RealAlmanacData {
   hourlyLuck: HourlyLuck[];
 }
 
-export interface HourlyLuck {
-  hour: string;
-  time: string;
-  suitable: string[];
-  unsuitable: string[];
-  clash: string;
-  direction: string;
-}
-
-// 爬取農民曆
+/**
+ * 爬取農民曆
+ * @param date 格式通常為 YYYY-MM-DD
+ */
 export async function fetchRealAlmanac(date: string): Promise<RealAlmanacData> {
   const url = `https://www.goodaytw.com/${date}`;
   
   try {
-    // 直接使用 CORS 代理
+    // 使用 CORS 代理繞過跨域限制
     const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
     const response = await fetch(proxyUrl);
+    
+    if (!response.ok) {
+      throw new Error(`網路請求失敗: ${response.status}`);
+    }
+
     const html = await response.text();
     return parseHTML(html, date);
   } catch (error) {
     console.error('爬取失敗:', error);
     throw error;
-  }
-}
-}export async function fetchRealAlmanac(date: string): Promise<RealAlmanacData> {
-  const url = `https://www.goodaytw.com/${date}`;
-  
-  try {
-    // 直接使用 CORS 代理
-    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-    const response = await fetch(proxyUrl);
-    const html = await response.text();
-    return parseHTML(html, date);
-  } catch (error) {
-    console.error('爬取失敗:', error);
-    throw error;
-  }
-}
-    // 使用 CORS 代理
-    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-    const response = await fetch(proxyUrl);
-    const html = await response.text();
-    return parseHTML(html, date);
   }
 }
 
+/**
+ * 解析 HTML 字串並提取農民曆資訊
+ */
 function parseHTML(html: string, date: string): RealAlmanacData {
   // 農曆
   const lunarMatch = html.match(/農曆\s*<\/dt>\s*<dd[^>]*>([^<]+)</);
@@ -168,6 +158,9 @@ function parseHTML(html: string, date: string): RealAlmanacData {
   };
 }
 
+/**
+ * 解析各時辰吉凶
+ */
 function parseHourlyLuck(html: string): HourlyLuck[] {
   const hours = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
   const times = [
