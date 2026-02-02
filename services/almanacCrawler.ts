@@ -31,10 +31,10 @@ export interface RealAlmanacData {
 export async function fetchRealAlmanac(date: string): Promise<RealAlmanacData> {
   const url = `https://www.goodaytw.com/${date}`;
   try {
-    // 更換為這個更穩定的免費代理
+    // 使用新的代理服務 api.codetabs.com，這目前對該目標網站最穩定
     const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`;
     const response = await fetch(proxyUrl);
-    if (!response.ok) throw new Error('代理伺服器拒絕請求');
+    if (!response.ok) throw new Error(`代理伺服器連線失敗: ${response.status}`);
     const html = await response.text();
     return parseHTML(html, date);
   } catch (error) {
@@ -49,14 +49,12 @@ function parseHTML(html: string, date: string): RealAlmanacData {
   const stemYearMatch = html.match(/([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])([鼠牛虎兔龍蛇馬羊猴雞狗豬])年/);
   const stemMonthMatch = html.match(/([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])月/);
   const stemDayMatch = html.match(/([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])日/);
-  
   const stemYear = stemYearMatch ? stemYearMatch[1] + stemYearMatch[2] + '年' : '';
   const stemMonth = stemMonthMatch ? stemMonthMatch[1] + '月' : '';
   const stemDay = stemDayMatch ? stemDayMatch[1] + '日' : '';
   const zodiac = stemYearMatch ? stemYearMatch[2] : '';
   const solarTermMatch = html.match(/節氣([^<\n，]+)/);
   const solarTerm = solarTermMatch ? solarTermMatch[1].trim() : undefined;
-  
   const suitableMatch = html.match(/宜\s*<\/dt>\s*<dd[^>]*>([^<]+)</);
   const suitable = suitableMatch ? suitableMatch[1].split('、').map(s => s.trim()).filter(s => s && s !== '餘事勿取') : [];
   const unsuitableMatch = html.match(/忌\s*<\/dt>\s*<dd[^>]*>([^<]+)</);
@@ -76,13 +74,8 @@ function parseHTML(html: string, date: string): RealAlmanacData {
   const luckyHours = luckyHoursMatch ? luckyHoursMatch[1].split('、').map(s => s.trim()) : [];
   const pengzuMatch = html.match(/彭祖百忌\s*<\/dt>\s*<dd[^>]*>([^<]+)/);
   const pengzu = pengzuMatch ? pengzuMatch[1].trim() : '';
-  
-  return {
-    date, lunarDate, stemBranch: { year: stemYear, month: stemMonth, day: stemDay },
-    zodiac, solarTerm, suitable, unsuitable, clash, direction,
-    luckyGods, unluckyGods, directions, fetalGod, luckyHours, pengzu, 
-    hourlyLuck: parseHourlyLuck(html)
-  };
+  const hourlyLuck = parseHourlyLuck(html);
+  return { date, lunarDate, stemBranch: { year: stemYear, month: stemMonth, day: stemDay }, zodiac, solarTerm, suitable, unsuitable, clash, direction, luckyGods, unluckyGods, directions, fetalGod, luckyHours, pengzu, hourlyLuck };
 }
 
 function parseHourlyLuck(html: string): HourlyLuck[] {
@@ -95,8 +88,8 @@ function parseHourlyLuck(html: string): HourlyLuck[] {
     if (match) {
       result.push({
         hour, time: times[index],
-        suitable: match[1].trim() !== '無' ? match[1].trim().split('、').map(s => s.trim()).filter(s => s) : [],
-        unsuitable: match[2].trim() !== '無' ? match[2].trim().split('、').map(s => s.trim()).filter(s => s) : [],
+        suitable: (match[1] && match[1].trim() !== '無') ? match[1].trim().split('、').map(s => s.trim()).filter(s => s) : [],
+        unsuitable: (match[2] && match[2].trim() !== '無') ? match[2].trim().split('、').map(s => s.trim()).filter(s => s) : [],
         clash: match[3] || '', direction: match[4]?.trim() || ''
       });
     } else {
