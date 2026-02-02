@@ -50,6 +50,7 @@ export async function fetchRealAlmanac(date: string): Promise<RealAlmanacData> {
     console.error('爬取失敗:', error);
     throw error;
   }
+}
 }export async function fetchRealAlmanac(date: string): Promise<RealAlmanacData> {
   const url = `https://www.goodaytw.com/${date}`;
   
