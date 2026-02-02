@@ -1,4 +1,5 @@
-// 從 goodaytw.com 爬取真實農民曆資料
+// services/almanacCrawler.ts
+// 保持你原本完整且詳盡的解析邏輯，僅更換代理服務以修復 CORS
 
 export interface HourlyLuck {
   hour: string;
@@ -38,14 +39,13 @@ export interface RealAlmanacData {
 
 /**
  * 爬取農民曆
- * @param date 格式通常為 YYYY-MM-DD
  */
 export async function fetchRealAlmanac(date: string): Promise<RealAlmanacData> {
   const url = `https://www.goodaytw.com/${date}`;
   
   try {
-    // 使用 CORS 代理繞過跨域限制
-    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+    // 💡 修改點：將 allorigins 換成 corsproxy.io，這在 Vercel 環境通常更穩定
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
     const response = await fetch(proxyUrl);
     
     if (!response.ok) {
@@ -61,7 +61,7 @@ export async function fetchRealAlmanac(date: string): Promise<RealAlmanacData> {
 }
 
 /**
- * 解析 HTML 字串並提取農民曆資訊
+ * 解析 HTML 字串並提取農民曆資訊 (完全保留你原本的詳盡 Regex)
  */
 function parseHTML(html: string, date: string): RealAlmanacData {
   // 農曆
@@ -159,7 +159,7 @@ function parseHTML(html: string, date: string): RealAlmanacData {
 }
 
 /**
- * 解析各時辰吉凶
+ * 解析各時辰吉凶 (完全保留你原本的詳盡邏輯)
  */
 function parseHourlyLuck(html: string): HourlyLuck[] {
   const hours = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
