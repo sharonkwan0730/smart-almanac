@@ -41,11 +41,29 @@ export async function fetchRealAlmanac(date: string): Promise<RealAlmanacData> {
   const url = `https://www.goodaytw.com/${date}`;
   
   try {
-    const response = await fetch(url);
+    // 直接使用 CORS 代理
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+    const response = await fetch(proxyUrl);
     const html = await response.text();
     return parseHTML(html, date);
   } catch (error) {
-    console.error('爬取失敗，嘗試使用 CORS 代理:', error);
+    console.error('爬取失敗:', error);
+    throw error;
+  }
+}export async function fetchRealAlmanac(date: string): Promise<RealAlmanacData> {
+  const url = `https://www.goodaytw.com/${date}`;
+  
+  try {
+    // 直接使用 CORS 代理
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+    const response = await fetch(proxyUrl);
+    const html = await response.text();
+    return parseHTML(html, date);
+  } catch (error) {
+    console.error('爬取失敗:', error);
+    throw error;
+  }
+}
     // 使用 CORS 代理
     const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
     const response = await fetch(proxyUrl);
