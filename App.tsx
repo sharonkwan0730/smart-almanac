@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { getAlmanacForDate, findLuckyDates, getZodiacFortune } from '../services/geminiService';
+import { ... } from './services/geminiService';
 import { AlmanacData, DateRecommendation, EventType, ZodiacFortune, ZodiacType, ZODIAC_LIST } from './types';
 import { AlmanacCard } from './components/AlmanacCard';
 
