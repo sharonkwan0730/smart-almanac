@@ -1,4 +1,4 @@
-// 從 goodaytw.com 爬取真實農民曆資料
+// 從 goodaytw.com 爬取真實農民曆資料（使用 CORS 代理）
 
 export interface RealAlmanacData {
   date: string;
@@ -36,26 +36,38 @@ export interface HourlyLuck {
   direction: string;
 }
 
-// 爬取農民曆
+// 爬取農民曆（直接用 CORS 代理，不需要後端）
 export async function fetchRealAlmanac(date: string): Promise<RealAlmanacData> {
-  try {
-    // 使用自己的 Vercel Function
-    const apiUrl = `/api/fetch-almanac?date=${date}`;
-    const response = await fetch(apiUrl);
-    
-    if (!response.ok) throw new Error('API 失敗');
-    
-    const html = await response.text();
-    return parseHTML(html, date);
-  } catch (error) {
-    console.error('爬取失敗:', error);
-    throw new Error('無法取得農民曆資料');
+  const url = `https://www.goodaytw.com/${date}`;
+  
+  // 嘗試多個 CORS 代理
+  const proxies = [
+    `https://corsproxy.io/?${encodeURIComponent(url)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+    `https://cors-anywhere.herokuapp.com/${url}`
+  ];
+  
+  for (const proxyUrl of proxies) {
+    try {
+      console.log('正在嘗試爬取:', proxyUrl);
+      const response = await fetch(proxyUrl);
+      if (response.ok) {
+        const html = await response.text();
+        console.log('✅ 爬取成功');
+        return parseHTML(html, date);
+      }
+    } catch (error) {
+      console.log('❌ 此代理失敗，嘗試下一個');
+      continue;
+    }
   }
+  
+  throw new Error('所有代理都失敗了');
 }
 
 function parseHTML(html: string, date: string): RealAlmanacData {
   // 農曆
-  const lunarMatch = html.match(/農曆\s*<\/dt>\s*<dd[^>]*>([^<]+)</);
+  const lunarMatch = html.match(/農曆[^>]*>([^<]+)</);
   const lunarDate = lunarMatch ? lunarMatch[1].trim() : '';
   
   // 干支
@@ -73,28 +85,28 @@ function parseHTML(html: string, date: string): RealAlmanacData {
   const solarTerm = solarTermMatch ? solarTermMatch[1].trim() : undefined;
   
   // 宜忌
-  const suitableMatch = html.match(/宜\s*<\/dt>\s*<dd[^>]*>([^<]+)</);
+  const suitableMatch = html.match(/宜[^>]*>([^<]+)</);
   const suitable = suitableMatch 
     ? suitableMatch[1].split('、').map(s => s.trim()).filter(s => s && s !== '餘事勿取')
     : [];
   
-  const unsuitableMatch = html.match(/忌\s*<\/dt>\s*<dd[^>]*>([^<]+)</);
+  const unsuitableMatch = html.match(/忌[^>]*>([^<]+)</);
   const unsuitable = unsuitableMatch 
     ? unsuitableMatch[1].split('、').map(s => s.trim())
     : [];
   
   // 沖煞
-  const clashMatch = html.match(/沖\s*<\/dt>\s*<dd[^>]*>\(([^)]+)\)([^<\n]+)/);
+  const clashMatch = html.match(/沖[^>]*>\(([^)]+)\)([^<\n]+)/);
   const clash = clashMatch ? clashMatch[1] : '';
   const direction = clashMatch ? clashMatch[2].trim() : '';
   
   // 吉神凶煞
-  const luckyGodsMatch = html.match(/吉神\s*<\/dt>\s*<dd[^>]*>([^<]+)/);
+  const luckyGodsMatch = html.match(/吉神[^>]*>([^<]+)</);
   const luckyGods = luckyGodsMatch 
     ? luckyGodsMatch[1].split('、').map(s => s.trim())
     : [];
   
-  const unluckyGodsMatch = html.match(/凶煞\s*<\/dt>\s*<dd[^>]*>([^<]+)/);
+  const unluckyGodsMatch = html.match(/凶煞[^>]*>([^<]+)</);
   const unluckyGods = unluckyGodsMatch 
     ? unluckyGodsMatch[1].split('、').map(s => s.trim())
     : [];
@@ -108,21 +120,23 @@ function parseHTML(html: string, date: string): RealAlmanacData {
   } : { joy: '', wealth: '', fortune: '' };
   
   // 胎神
-  const fetalGodMatch = html.match(/胎神\s*<\/dt>\s*<dd[^>]*>([^<]+)/);
+  const fetalGodMatch = html.match(/胎神[^>]*>([^<]+)</);
   const fetalGod = fetalGodMatch ? fetalGodMatch[1].trim() : '';
   
   // 吉時
-  const luckyHoursMatch = html.match(/吉時\s*<\/dt>\s*<dd[^>]*>([^<]+)/);
+  const luckyHoursMatch = html.match(/吉時[^>]*>([^<]+)</);
   const luckyHours = luckyHoursMatch 
     ? luckyHoursMatch[1].split('、').map(s => s.trim())
     : [];
   
   // 彭祖百忌
-  const pengzuMatch = html.match(/彭祖百忌\s*<\/dt>\s*<dd[^>]*>([^<]+)/);
+  const pengzuMatch = html.match(/彭祖百忌[^>]*>([^<]+)</);
   const pengzu = pengzuMatch ? pengzuMatch[1].trim() : '';
   
   // 時辰吉凶
   const hourlyLuck = parseHourlyLuck(html);
+  
+  console.log('解析結果:', { lunarDate, stemYear, stemMonth, stemDay, suitable, unsuitable });
   
   return {
     date,
@@ -156,42 +170,12 @@ function parseHourlyLuck(html: string): HourlyLuck[] {
     '15:00-17:00', '17:00-19:00', '19:00-21:00', '21:00-23:00'
   ];
   
-  const result: HourlyLuck[] = [];
-  
-  hours.forEach((hour, index) => {
-    const pattern = new RegExp(
-      `${hour}[\\s\\S]*?宜[\\s\\S]*?([^忌]*?)忌[\\s\\S]*?([^沖]*?)沖[\\s\\S]*?\\(([^)]+)\\)([^<]*?)(?=${hours[index + 1] || '©'})`,
-      'i'
-    );
-    const match = html.match(pattern);
-    
-    if (match) {
-      const suitableText = match[1].trim();
-      const unsuitableText = match[2].trim();
-      
-      result.push({
-        hour,
-        time: times[index],
-        suitable: suitableText && suitableText !== '無' 
-          ? suitableText.split('、').map(s => s.trim()).filter(s => s)
-          : [],
-        unsuitable: unsuitableText && unsuitableText !== '無' && unsuitableText !== '諸事不宜'
-          ? unsuitableText.split('、').map(s => s.trim()).filter(s => s)
-          : unsuitableText === '諸事不宜' ? ['諸事不宜'] : [],
-        clash: match[3] || '',
-        direction: match[4]?.trim() || ''
-      });
-    } else {
-      result.push({
-        hour,
-        time: times[index],
-        suitable: [],
-        unsuitable: [],
-        clash: '',
-        direction: ''
-      });
-    }
-  });
-  
-  return result;
+  return hours.map((hour, index) => ({
+    hour,
+    time: times[index],
+    suitable: [],
+    unsuitable: [],
+    clash: '',
+    direction: ''
+  }));
 }
