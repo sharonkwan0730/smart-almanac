@@ -61,54 +61,12 @@ const YOGAS = [
  * 將公曆轉換為藏曆
  */
 export async function convertToTibetanCalendar(gregorianDate: string): Promise<TibetanCalendarData> {
-  const date = new Date(gregorianDate);
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  
-  // 先嘗試從 zangli.pro API 取得真實資料
-  try {
-    const apiUrl = `https://zangli.pro/api/date?y=${year}&m=${month}&d=${day}`;
-    const response = await fetch(apiUrl);
-    if (response.ok) {
-      const data = await response.json();
-      return parseZangliAPIResponse(data, gregorianDate);
-    }
-  } catch (error) {
-    console.log('無法連接 zangli.pro API，使用計算方式');
-  }
-  
-  // 如果 API 失敗，使用簡化計算
+  // 直接使用計算方式（zangli.pro API 可能不穩定）
   return calculateTibetanDate(gregorianDate);
 }
 
 /**
- * 解析 zangli.pro API 回應
- */
-function parseZangliAPIResponse(data: any, gregorianDate: string): TibetanCalendarData {
-  const tibetanYear = data.tibetan_year || TIBETAN_YEARS[new Date(gregorianDate).getFullYear()];
-  const tibetanMonth = data.tibetan_month || '正月';
-  const tibetanDay = data.tibetan_day || '初一';
-  const dayNum = parseInt(tibetanDay.replace(/[^\d]/g, '')) || 1;
-  
-  return {
-    date: `${tibetanYear} ${tibetanMonth}${tibetanDay}`,
-    year: tibetanYear,
-    month: tibetanMonth,
-    day: tibetanDay,
-    weekday: getWeekday(gregorianDate),
-    constellation: CONSTELLATIONS[(dayNum - 1) % 28],
-    yoga: YOGAS[(dayNum - 1) % 27],
-    buddhaDay: BUDDHA_DAYS[dayNum],
-    merit: BUDDHA_DAYS[dayNum] ? extractMerit(BUDDHA_DAYS[dayNum]) : undefined,
-    specialDay: data.special_day,
-    auspicious: getAuspiciousByDay(dayNum),
-    inauspicious: getInauspiciousByDay(dayNum)
-  };
-}
-
-/**
- * 簡化計算藏曆（當 API 不可用時）
+ * 簡化計算藏曆
  */
 function calculateTibetanDate(gregorianDate: string): TibetanCalendarData {
   const date = new Date(gregorianDate);
