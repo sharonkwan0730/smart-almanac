@@ -1,4 +1,4 @@
-// 農民曆服務 - 使用預設資料（不依賴爬蟲）
+// 農民曆服務 - 透過 Vercel API 取得資料
 
 export interface RealAlmanacData {
   date: string;
@@ -36,7 +36,59 @@ export interface HourlyLuck {
   direction: string;
 }
 
-// 預設的農民曆資料對照表
+// 取得農民曆資料 - 優先使用 API，失敗則用預設資料
+export async function fetchRealAlmanac(date: string): Promise<RealAlmanacData> {
+  console.log('📅 取得農民曆資料:', date);
+  
+  try {
+    // 呼叫 Vercel API
+    const response = await fetch(`/api/almanac?date=${date}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!response.ok) {
+      throw new Error(`API 錯誤: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('✅ API 資料取得成功:', data);
+    return data;
+
+  } catch (error) {
+    console.warn('⚠️ API 請求失敗，使用預設資料:', error);
+    
+    // 檢查是否有預設資料
+    const defaultData = DEFAULT_ALMANAC_DATA[date];
+    if (defaultData) {
+      console.log('✅ 使用預設農民曆資料');
+      return {
+        date,
+        lunarDate: defaultData.lunarDate || '農曆日期',
+        stemBranch: defaultData.stemBranch || { year: '年', month: '月', day: '日' },
+        zodiac: defaultData.zodiac || '蛇',
+        solarTerm: defaultData.solarTerm,
+        suitable: defaultData.suitable || ['祭祀', '祈福'],
+        unsuitable: defaultData.unsuitable || ['開市', '動土'],
+        clash: defaultData.clash || '',
+        direction: defaultData.direction || '',
+        luckyGods: defaultData.luckyGods || [],
+        unluckyGods: defaultData.unluckyGods || [],
+        directions: defaultData.directions || { joy: '東方', wealth: '南方', fortune: '西方' },
+        fetalGod: defaultData.fetalGod || '',
+        luckyHours: defaultData.luckyHours || ['子', '丑', '寅'],
+        pengzu: defaultData.pengzu || '',
+        hourlyLuck: generateHourlyLuck(defaultData.luckyHours || [])
+      };
+    }
+    
+    // 如果沒有預設資料，生成通用資料
+    console.log('⚠️ 無預設資料，使用通用模板');
+    return generateGenericData(date);
+  }
+}
+
+// 預設的農民曆資料對照表（備用）
 const DEFAULT_ALMANAC_DATA: { [key: string]: Partial<RealAlmanacData> } = {
   '2026-02-02': {
     lunarDate: '十二月十五',
@@ -87,40 +139,6 @@ const DEFAULT_ALMANAC_DATA: { [key: string]: Partial<RealAlmanacData> } = {
     pengzu: '己不破券二主並亡；酉不宴客醉坐顛狂'
   }
 };
-
-// 取得農民曆資料
-export async function fetchRealAlmanac(date: string): Promise<RealAlmanacData> {
-  console.log('📅 取得農民曆資料:', date);
-  
-  // 先檢查是否有預設資料
-  const defaultData = DEFAULT_ALMANAC_DATA[date];
-  
-  if (defaultData) {
-    console.log('✅ 使用預設農民曆資料');
-    return {
-      date,
-      lunarDate: defaultData.lunarDate || '農曆日期',
-      stemBranch: defaultData.stemBranch || { year: '年', month: '月', day: '日' },
-      zodiac: defaultData.zodiac || '生肖',
-      solarTerm: defaultData.solarTerm,
-      suitable: defaultData.suitable || ['祭祀', '祈福'],
-      unsuitable: defaultData.unsuitable || ['開市', '動土'],
-      clash: defaultData.clash || '',
-      direction: defaultData.direction || '',
-      luckyGods: defaultData.luckyGods || [],
-      unluckyGods: defaultData.unluckyGods || [],
-      directions: defaultData.directions || { joy: '東方', wealth: '南方', fortune: '西方' },
-      fetalGod: defaultData.fetalGod || '',
-      luckyHours: defaultData.luckyHours || ['子', '丑', '寅'],
-      pengzu: defaultData.pengzu || '',
-      hourlyLuck: generateHourlyLuck(defaultData.luckyHours || [])
-    };
-  }
-  
-  // 如果沒有預設資料，生成通用資料
-  console.log('⚠️ 無預設資料，使用通用模板');
-  return generateGenericData(date);
-}
 
 // 生成通用農民曆資料
 function generateGenericData(date: string): RealAlmanacData {
