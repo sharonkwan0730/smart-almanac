@@ -38,13 +38,13 @@ export interface HourlyLuck {
 
 // 爬取農民曆
 export async function fetchRealAlmanac(date: string): Promise<RealAlmanacData> {
-  const url = `https://www.goodaytw.com/${date}`;
-  
   try {
-    // 使用 CORS 代理
-    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-    const response = await fetch(proxyUrl);
-    if (!response.ok) throw new Error('代理失敗');
+    // 使用自己的 Vercel Function
+    const apiUrl = `/api/fetch-almanac?date=${date}`;
+    const response = await fetch(apiUrl);
+    
+    if (!response.ok) throw new Error('API 失敗');
+    
     const html = await response.text();
     return parseHTML(html, date);
   } catch (error) {
