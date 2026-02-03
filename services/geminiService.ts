@@ -7,7 +7,7 @@ const getCacheKey = (date: string) => `almanac_cache_v8_${date}`;
 
 // 核心 API 呼叫：修正模型名稱與端點
 async function callGeminiAPI(prompt: string): Promise<any> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+  const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`,
   
   const response = await fetch(url, {
     method: 'POST',
