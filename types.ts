@@ -9,6 +9,7 @@ export interface TibetanData {
   auspicious: string[];
   inauspicious: string[];
   specialDay?: string;
+  buddhaDay?: string; 
   // 藏傳佛教徒專屬欄位
   dharmaAdvice: string; // 當日修行法門建議 (例如：蓮師薈供、度母修法、煙供等)
   traditionalActivities: {
