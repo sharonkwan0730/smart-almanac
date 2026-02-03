@@ -7,7 +7,7 @@ const getCacheKey = (date: string) => `almanac_cache_v8_${date}`;
 
 // 核心 API 呼叫：修正模型名稱與端點
 async function callGeminiAPI(prompt: string): Promise<any> {
-  const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`,
+  const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
   
   const response = await fetch(url, {
     method: 'POST',
@@ -24,9 +24,6 @@ async function callGeminiAPI(prompt: string): Promise<any> {
   return JSON.parse(text.replace(/```json|```/g, "").trim());
 }
 
-/**
- * ✅ 修正 TS2554：確保支援 App.tsx(99,50) 傳入的兩個參數
- */
 export async function getAlmanacForDate(dateStr: string, forceRefresh: boolean = false): Promise<AlmanacData> {
   if (!forceRefresh) {
     const cached = localStorage.getItem(getCacheKey(dateStr));
@@ -50,7 +47,6 @@ export async function getAlmanacForDate(dateStr: string, forceRefresh: boolean =
         analysis: aiData.analysis || '',
         dharmaAdvice: aiData.dharmaAdvice || '',
         traditionalActivities: {
-          // ✅ 修正 TS2345：確保傳入的是 string
           haircut: getHaircutAdvice(String(tibetanData?.day || "")),
           windHorse: getWindHorseAdvice(String(tibetanData?.day || "")),
           other: []
@@ -78,9 +74,6 @@ export async function getAlmanacForDate(dateStr: string, forceRefresh: boolean =
   }
 }
 
-/**
- * 補齊 App.tsx 需要的 export 函式
- */
 export async function findLuckyDates(event: EventType, month: string): Promise<DateRecommendation[]> {
   try {
     return await callGeminiAPI(`擇日: ${event} ${month}`);
@@ -93,9 +86,6 @@ export async function getZodiacFortune(zodiac: ZodiacType, dateStr: string): Pro
   return await callGeminiAPI(`生肖 ${zodiac} 運勢 ${dateStr}`);
 }
 
-/**
- * 🛡️ 輔助函式：當一切失敗時的防崩潰結構
- */
 function createSafeDefaultData(date: string): AlmanacData {
   return {
     solarDate: date,
@@ -115,6 +105,5 @@ function createSafeDefaultData(date: string): AlmanacData {
   } as any;
 }
 
-// 內部備用函式
 async function generateFullAlmanac(date: string) { return createSafeDefaultData(date); }
 async function generateWithAI(real: any, date: string) { return createSafeDefaultData(date); }
