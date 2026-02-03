@@ -38,18 +38,26 @@ export interface HourlyLuck {
 
 // 爬取農民曆
 export async function fetchRealAlmanac(date: string): Promise<RealAlmanacData> {
+  const url = `https://www.goodaytw.com/${date}`;
+  
+  // 直接用 CORS 代理
+  const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+  
   try {
-    // 使用自己的 Vercel Function
-    const apiUrl = `/api/fetch-almanac?date=${date}`;
-    const response = await fetch(apiUrl);
+    console.log('正在爬取:', proxyUrl);
+    const response = await fetch(proxyUrl);
     
-    if (!response.ok) throw new Error('API 失敗');
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
     
     const html = await response.text();
-    console.log('HTML 長度:', html.length);
+    console.log('✅ 爬取成功，HTML 長度:', html.length);
+    console.log('HTML 開頭:', html.substring(0, 300));
+    
     return parseHTML(html, date);
   } catch (error) {
-    console.error('爬取失敗:', error);
+    console.error('❌ 爬取失敗:', error);
     throw new Error('無法取得農民曆資料');
   }
 }
@@ -83,6 +91,8 @@ function parseHTML(html: string, date: string): RealAlmanacData {
   const stemDay = stemDayMatch ? stemDayMatch[1] + '日' : '';
   const zodiac = stemYearMatch ? stemYearMatch[2] : '';
   
+  console.log('干支:', { stemYear, stemMonth, stemDay, zodiac });
+  
   // 節氣
   const solarTermMatch = html.match(/節氣([^<\n，]+)/);
   const solarTerm = solarTermMatch ? solarTermMatch[1].trim() : undefined;
@@ -97,6 +107,8 @@ function parseHTML(html: string, date: string): RealAlmanacData {
   const unsuitable = unsuitableMatch 
     ? unsuitableMatch[1].split('、').map(s => s.trim())
     : [];
+  
+  console.log('宜忌:', { suitable: suitable.slice(0, 3), unsuitable: unsuitable.slice(0, 3) });
   
   // 沖煞
   const clashMatch = html.match(/沖\s*<\/dt>\s*<dd[^>]*>\(([^)]+)\)([^<\n]+)/);
