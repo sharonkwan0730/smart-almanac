@@ -4,21 +4,52 @@ import { convertToTibetanCalendar, getHaircutAdvice, getWindHorseAdvice } from "
 
 const getCacheKey = (date: string) => `almanac_cache_v9_${date}`;
 
+// 安全的 localStorage 操作
+function safeGetItem(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch (e) {
+    console.warn("localStorage 讀取失敗:", e);
+    return null;
+  }
+}
+
+function safeSetItem(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch (e) {
+    console.warn("localStorage 寫入失敗:", e);
+  }
+}
+
 export async function getAlmanacForDate(dateStr: string, forceRefresh: boolean = false): Promise<AlmanacData> {
+  console.log("🔍 開始載入農民曆:", dateStr);
+  
+  // 檢查快取
   if (!forceRefresh) {
-    const cached = localStorage.getItem(getCacheKey(dateStr));
+    const cached = safeGetItem(getCacheKey(dateStr));
     if (cached) {
-      try { return JSON.parse(cached); } catch (e) { console.warn("Cache error"); }
+      try { 
+        console.log("✅ 使用快取資料");
+        return JSON.parse(cached); 
+      } catch (e) { 
+        console.warn("快取解析失敗"); 
+      }
     }
   }
 
   try {
+    console.log("📅 取得農民曆資料...");
     const realData = await fetchRealAlmanac(dateStr);
+    console.log("📅 農民曆資料取得成功:", realData);
+    
+    console.log("🏔️ 取得藏曆資料...");
     const tibetanData = await convertToTibetanCalendar(dateStr);
+    console.log("🏔️ 藏曆資料取得成功:", tibetanData);
 
     const result: AlmanacData = {
       solarDate: dateStr,
-      lunarDate: realData.lunarDate || '載入中',
+      lunarDate: realData.lunarDate || '農曆日期',
       solarTerm: realData.solarTerm,
       tibetanData: {
         date: tibetanData.date,
@@ -64,10 +95,11 @@ export async function getAlmanacForDate(dateStr: string, forceRefresh: boolean =
       }))
     };
 
-    localStorage.setItem(getCacheKey(dateStr), JSON.stringify(result));
+    console.log("✅ 資料組合完成:", result);
+    safeSetItem(getCacheKey(dateStr), JSON.stringify(result));
     return result;
   } catch (error) {
-    console.error("載入失敗:", error);
+    console.error("❌ 載入失敗:", error);
     throw error;
   }
 }
