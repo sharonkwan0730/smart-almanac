@@ -2,7 +2,7 @@ import { AlmanacData, DateRecommendation, EventType, ZodiacFortune, ZodiacType }
 import { fetchRealAlmanac } from "./almanacCrawler";
 import { convertToTibetanCalendar, getHaircutAdvice, getWindHorseAdvice } from "./tibetanCalendar";
 
-const getCacheKey = (date: string) => `almanac_cache_v9_${date}`;
+const getCacheKey = (date: string) => `almanac_cache_v10_${date}`;
 
 // 安全的 localStorage 操作
 function safeGetItem(key: string): string | null {
@@ -47,6 +47,31 @@ export async function getAlmanacForDate(dateStr: string, forceRefresh: boolean =
     const tibetanData = await convertToTibetanCalendar(dateStr);
     console.log("🏔️ 藏曆資料取得成功:", tibetanData);
 
+    // 嘗試從 zangli.pro 取得更詳細的藏曆資料
+    let buddhaDay: string | undefined;
+    let meritFromApi: string | undefined;
+    
+    try {
+      console.log("🙏 取得 zangli.pro 佛誕日資料...");
+      const tibetanResponse = await fetch(`/api/tibetan?date=${dateStr}`);
+      if (tibetanResponse.ok) {
+        const tibetanApiData = await tibetanResponse.json();
+        console.log("🙏 zangli.pro 資料:", tibetanApiData);
+        buddhaDay = tibetanApiData.buddhaDay || undefined;
+        meritFromApi = tibetanApiData.merit || undefined;
+      }
+    } catch (e) {
+      console.warn("zangli.pro API 失敗，使用本地資料");
+    }
+
+    // 如果 API 沒取到，用本地計算的資料
+    if (!buddhaDay) {
+      buddhaDay = tibetanData.buddhaDay;
+    }
+    if (!meritFromApi) {
+      meritFromApi = tibetanData.merit;
+    }
+
     const result: AlmanacData = {
       solarDate: dateStr,
       lunarDate: realData.lunarDate || '農曆日期',
@@ -57,20 +82,21 @@ export async function getAlmanacForDate(dateStr: string, forceRefresh: boolean =
         weekday: tibetanData.weekday,
         constellation: tibetanData.constellation,
         yoga: tibetanData.yoga,
-        analysis: tibetanData.buddhaDay 
-          ? `今日為${tibetanData.buddhaDay}。建議多行供養、持咒、放生等善行。`
+        buddhaDay: buddhaDay,
+        analysis: buddhaDay 
+          ? `今日為${buddhaDay}。建議多行供養、持咒、放生等善行。`
           : '今日宜依照農民曆宜忌安排活動，保持正念修持。',
         auspicious: tibetanData.auspicious,
         inauspicious: tibetanData.inauspicious,
         specialDay: tibetanData.specialDay,
-        dharmaAdvice: tibetanData.buddhaDay 
+        dharmaAdvice: buddhaDay 
           ? '建議供養、持咒、放生、佈施等善行，功德倍增。'
           : '建議日常持咒、禮佛、行善積德。',
-        meritMultiplier: tibetanData.merit,
+        meritMultiplier: meritFromApi,
         traditionalActivities: {
           haircut: getHaircutAdvice(tibetanData.day),
           windHorse: getWindHorseAdvice(tibetanData.day),
-          other: tibetanData.buddhaDay ? ['供養', '持咒', '放生'] : []
+          other: buddhaDay ? ['供養', '持咒', '放生'] : []
         }
       },
       stemBranch: `${realData.stemBranch.year} ${realData.stemBranch.month} ${realData.stemBranch.day}`,
@@ -84,8 +110,8 @@ export async function getAlmanacForDate(dateStr: string, forceRefresh: boolean =
       luckySpirits: realData.luckyGods,
       unluckySpirits: realData.unluckyGods,
       pengZuTaboo: realData.pengzu,
-      dailyAdvice: tibetanData.buddhaDay 
-        ? `今日為${tibetanData.buddhaDay}，宜多行善事。農民曆宜${realData.suitable.slice(0, 3).join('、')}。`
+      dailyAdvice: buddhaDay 
+        ? `今日為${buddhaDay}，宜多行善事。農民曆宜${realData.suitable.slice(0, 3).join('、')}。`
         : `農民曆宜${realData.suitable.slice(0, 3).join('、')}${realData.unsuitable.length > 0 ? '，忌' + realData.unsuitable.slice(0, 2).join('、') : ''}。`,
       hourlyLuck: realData.hourlyLuck.map(h => ({
         hour: h.hour,
