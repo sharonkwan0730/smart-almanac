@@ -1,6 +1,4 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req, res) {
   const { date } = req.query;
   
   if (!date || typeof date !== 'string') {
@@ -12,7 +10,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const response = await fetch(url);
     const html = await response.text();
     
-    // 設定 CORS header
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET');
     
